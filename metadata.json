@@ -1,0 +1,6 @@
+{
+  "name": "Atmosphere Canvas",
+  "description": "Image To Animated Video Studio - Chuyển hình ảnh tĩnh thành video hoạt cảnh nghệ thuật động sắc nét kèm nhạc nền Lofi thư giãn.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
