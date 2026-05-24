@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { EffectState, AudioSettings, PresetName } from './types';
-import { INITIAL_STATE, INITIAL_AUDIO, PRESETS } from './constants/presets';
+import { EffectState, AudioSettings, TextLayer } from './types';
+import { INITIAL_STATE, INITIAL_AUDIO } from './constants/presets';
 import CanvasRenderer from './components/CanvasRenderer';
 import EffectsPanel from './components/EffectsPanel';
 import { 
@@ -41,7 +41,145 @@ export default function App() {
   // Primary States
   const [effectState, setEffectState] = useState<EffectState>(INITIAL_STATE);
   const [audioSettings, setAudioSettings] = useState<AudioSettings>(INITIAL_AUDIO);
-  const [activePresetId, setActivePresetId] = useState<PresetName | null>(null);
+
+  // Load from localStorage or default
+  const [textLayers, setTextLayers] = useState<TextLayer[]>(() => {
+    try {
+      const persisted = localStorage.getItem('atmosphere_text_layers');
+      if (persisted) {
+        return JSON.parse(persisted);
+      }
+    } catch (e) {
+      console.warn('Failed to parse text layers:', e);
+    }
+    return [
+      {
+        id: 'text_1',
+        name: 'Tiêu đề Stay With Me',
+        content: 'Stay With Me',
+        fontFamily: 'Playfair Display',
+        fontSize: 55,
+        fontWeight: 700,
+        italic: true,
+        uppercase: true,
+        color: '#ffffff',
+        gradientEnabled: true,
+        gradient: ['#ffffff', '#ffd6f5'],
+        opacity: 100,
+        letterSpacing: 4,
+        lineHeight: 1.2,
+        align: 'center',
+        x: 50,
+        y: 35,
+        rotation: 0,
+        scale: 1,
+        shadow: {
+          enabled: true,
+          blur: 15,
+          offsetX: 0,
+          offsetY: 6,
+          color: 'rgba(0,0,0,0.5)'
+        },
+        stroke: {
+          enabled: true,
+          width: 1.5,
+          color: '#1e0524'
+        },
+        glow: {
+          enabled: true,
+          intensity: 50,
+          color: '#ff66cc'
+        },
+        background: {
+          enabled: true,
+          type: 'blur',
+          color: 'rgba(15, 10, 20, 0.45)',
+          colorEnd: 'rgba(30, 15, 45, 0.45)',
+          opacity: 100,
+          blur: 10,
+          radius: 16,
+          padding: 24
+        },
+        animation: {
+          type: 'glowBreathing',
+          speed: 40
+        },
+        visible: true,
+        locked: false,
+        zIndex: 10
+      },
+      {
+        id: 'text_2',
+        name: 'Nhãn Official Music Video',
+        content: 'OFFICIAL MUSIC VIDEO',
+        fontFamily: 'Montserrat',
+        fontSize: 16,
+        fontWeight: 700,
+        italic: false,
+        uppercase: true,
+        color: '#f8fafc',
+        gradientEnabled: true,
+        gradient: ['#f8fafc', '#94a3b8'],
+        opacity: 90,
+        letterSpacing: 5,
+        lineHeight: 1.2,
+        align: 'center',
+        x: 50,
+        y: 84,
+        rotation: 0,
+        scale: 1,
+        shadow: {
+          enabled: true,
+          blur: 8,
+          offsetX: 0,
+          offsetY: 2,
+          color: 'rgba(0,0,0,0.5)'
+        },
+        stroke: {
+          enabled: false,
+          width: 1,
+          color: '#000000'
+        },
+        glow: {
+          enabled: false,
+          intensity: 0,
+          color: '#ffffff'
+        },
+        background: {
+          enabled: true,
+          type: 'solid',
+          color: 'rgba(15, 23, 42, 0.8)',
+          colorEnd: 'rgba(15, 23, 42, 0.8)',
+          opacity: 100,
+          blur: 0,
+          radius: 99,
+          padding: 12
+        },
+        animation: {
+          type: 'none',
+          speed: 0
+        },
+        visible: true,
+        locked: false,
+        zIndex: 5
+      }
+    ];
+  });
+
+  const [activeTextLayerId, setActiveTextLayerId] = useState<string | null>(() => {
+    try {
+      const persisted = localStorage.getItem('atmosphere_text_layers');
+      if (persisted) {
+        const parsed = JSON.parse(persisted);
+        if (parsed.length > 0) return parsed[0].id;
+      }
+    } catch (_) {}
+    return 'text_1';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('atmosphere_text_layers', JSON.stringify(textLayers));
+  }, [textLayers]);
   
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   const [imageFit, setImageFit] = useState<'cover' | 'contain'>('cover');
@@ -63,17 +201,6 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Preset Applicator
-  const handleApplyPreset = (presetId: PresetName) => {
-    const selected = PRESETS.find(p => p.id === presetId);
-    if (!selected) return;
-
-    // Apply entire visual state only - do NOT alter audio settings as requested
-    setEffectState(selected.state);
-    
-    setActivePresetId(presetId);
-  };
-
   // File Upload Handlers (FileReader dataURL setup)
   const processBackdropFile = (file: File) => {
     if (!file.type.startsWith('image/')) {
@@ -85,7 +212,6 @@ export default function App() {
     reader.onload = (e) => {
       if (e.target?.result) {
         setBackgroundImage(e.target.result as string);
-        setActivePresetId(null); // Custom uploads clear active presets
       }
     };
     reader.readAsDataURL(file);
@@ -117,7 +243,6 @@ export default function App() {
 
   const handleRemoveImage = () => {
     setBackgroundImage(null);
-    setActivePresetId(null);
   };
 
   return (
@@ -189,6 +314,7 @@ export default function App() {
             playing={playing}
             setPlaying={setPlaying}
             cinemaMode={cinemaMode}
+            textLayers={textLayers}
           />
 
           {/* Toggle buttons underneath Canvas block */}
@@ -269,7 +395,6 @@ export default function App() {
                     key={backdrop.id}
                     onClick={() => {
                       setBackgroundImage(backdrop.url);
-                      setActivePresetId(null);
                     }}
                     className={`relative aspect-video rounded-xl overflow-hidden border group transition-all ${
                       backgroundImage === backdrop.url 
@@ -317,8 +442,10 @@ export default function App() {
               setEffectState={setEffectState}
               audioSettings={audioSettings}
               setAudioSettings={setAudioSettings}
-              onApplyPreset={handleApplyPreset}
-              activePresetId={activePresetId}
+              textLayers={textLayers}
+              setTextLayers={setTextLayers}
+              activeTextLayerId={activeTextLayerId}
+              setActiveTextLayerId={setActiveTextLayerId}
             />
           </section>
         )}
